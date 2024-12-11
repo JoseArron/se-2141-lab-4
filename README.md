@@ -132,7 +132,7 @@ WHERE status = 'overdue';
 
 Performance:
 
-![Performance of getting overdue loans](data-integrity-and-optimization\1_performance.png)
+![Performance of adding a book loan](data-integrity-and-optimization\1_performance.png)
 
 
 > Fast retrieval of overdue loans are handled by creating an index: 
