@@ -1,6 +1,6 @@
 ## SE 2141 LAB 4
 > Online Library Management System Database Design <br>
-> Suoberon, Jose Arron Franz I.
+ Suoberon, Jose Arron Franz I.
 
 ## Table of Contents
 
@@ -9,7 +9,6 @@
 - [SQL Queries](#sql-queries)
 - [Data Integrity and Optimization](#data-integrity-and-optimization)
 - [Reflection](#reflection)
-
 
 ## Conceptual Design
 
@@ -129,8 +128,33 @@ WHERE status = 'overdue';
 
 ## Data Integrity and Optimization
 
+> The prevention of borrowing books when no copies are available are handled by a transaction block above constructed so that if any part fails, the database rolls back the changes. It’s simple but effective, although one downside is that this might slightly slow things down during heavy use, but it’s worth it to avoid bad data and ensure users get immediate feedback.
+
+Performance:
+
+![Performance of getting overdue loans](data-integrity-and-optimization\1_performance.png)
+
+
+> Fast retrieval of overdue loans are handled by creating an index: 
+
+```sql
+CREATE INDEX idx_overdue_loans ON book_loans (status, loan_date); 
+```
+ 
+> With this, queries like finding all overdue loans become much faster by reducing the amount of data the database needs to scan. Instead of going through every row in the `book_loans` table, the index helps the system quickly locate only the rows where the status is set to `overdue`.
+
+Performance of running
+```sql
+SELECT * FROM book_loans
+WHERE status = 'overdue';
+``` 
+![Performance of getting overdue loans](data-integrity-and-optimization\2_performance.png)
 
 ## Reflection
+
+Performance issues may arise when the database grows large enough. Borrowing books or searching for loans might slow down, or just not work at all which can frustrate users.
+
+It can be modified to archive old records like those that are completed a year ago into a separate table to keep the main tables smaller and faster.
 
 
 

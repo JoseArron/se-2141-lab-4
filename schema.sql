@@ -24,3 +24,5 @@ CREATE TABLE book_loans (
     return_date DATE,
     status STATUS NOT NULL
   );
+
+CREATE INDEX idx_overdue_loans ON book_loans (status, loan_date); 
