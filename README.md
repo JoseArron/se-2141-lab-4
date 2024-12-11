@@ -25,30 +25,30 @@ requirements
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE Users (
+CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     full_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(128) UNIQUE NOT NULL,
     membership_date DATE NOT NULL
   );
-  
-CREATE TABLE Books (
+ 
+CREATE TABLE books (
+	isbn VARCHAR(17) PRIMARY KEY NOT NULL,
     title VARCHAR(255) NOT NULL,
     author VARCHAR(255) NOT NULL,
-    isbn VARCHAR(17) PRIMARY KEY NOT NULL,
     genre VARCHAR(50),
     published_year INT,
-    quantity_available INT NOT NULL,
-  );
-  
-CREATE TABLE Book_Loans (
-    user_id UUID REFERENCES Users (user_id) ON DELETE CASCADE,
-    isbn VARCHAR(17) REFERENCES Books (isbn) ON DELETE CASCADE,
-    loan_date DATE NOT NULL,
-    return_date DATE,
-    status VARCHAR(50) NOT NULL
+    quantity_available INT NOT NULL
   );
 
+CREATE TYPE STATUS AS ENUM('borrowed', 'returned', 'overdue');
+CREATE TABLE book_loans (
+    user_id UUID REFERENCES users (user_id) ON DELETE CASCADE NOT NULL,
+    isbn VARCHAR(17) REFERENCES books (isbn) ON DELETE CASCADE NOT NULL,
+    loan_date DATE NOT NULL,
+    return_date DATE,
+    status STATUS NOT NULL
+  );
 ```
 
 ## SQL Queries
@@ -56,7 +56,7 @@ CREATE TABLE Book_Loans (
 
 [Query 1](queries/1_output.sql)
 ```sql
-INSERT INTO Books (title, author, isbn, genre, published_year, quantity_available) 
+INSERT INTO books (title, author, isbn, genre, published_year, quantity_available) 
 VALUES ('Fear Nothing', 'Dean Koontz', '9780553479003', 'thriller', 1997, 5)
 RETURNING *;
 ```
@@ -66,7 +66,7 @@ RETURNING *;
 
 [Query 2](queries/2_output.sql)
 ```sql
-INSERT INTO Users (full_name, email, membership_date) 
+INSERT INTO users (full_name, email, membership_date) 
 VALUES ('Shishh', 'wooaah@gmail.com', CURRENT_DATE)
 RETURNING *;
 ```
@@ -76,9 +76,33 @@ RETURNING *;
 
 [Query 3](queries/3_output.sql)
 ```sql
-INSERT INTO Book_Loans (user_id, isbn, loan_date, status) 
-VALUES ('17796446-e394-48d1-9f5d-b5f011dbbe3e', '9780553479003', CURRENT_DATE, 'borrowed')
-RETURNING *;
+DO $$
+DECLARE
+    p_user_id UUID = 'caf349f9-e451-462f-a67a-2a5c80ffaf75';
+    p_isbn VARCHAR(17) = '9780553479003';
+    available_count INT;
+BEGIN
+    SELECT quantity_available INTO available_count 
+    FROM books 
+    WHERE isbn = p_isbn;
+
+    --check for possible errors
+    IF available_count IS NULL THEN
+        RAISE EXCEPTION 'Book not found.';
+    ELSIF available_count <= 0 THEN
+        RAISE EXCEPTION 'Sorry. There are no copies left for this book.';
+    END IF;
+
+   --insert to book loans table
+    INSERT INTO book_loans (user_id, isbn, loan_date, status) 
+    VALUES (p_user_id, p_isbn, CURRENT_DATE, 'borrowed');
+
+    --update qty
+    UPDATE books 
+    SET quantity_available = quantity_available - 1 
+    WHERE isbn = p_isbn;
+
+END $$;
 ```
 ![Output of query 3](queries/3_output.png)
 
@@ -87,24 +111,23 @@ RETURNING *;
 [Query 4](queries/4_output.sql)
 ```sql
 SELECT b.title, bl.loan_date, bl.status
-FROM Books b 
-JOIN Book_Loans bl ON b.ISBN = bl.ISBN 
-WHERE bl.User_ID = '17796446-e394-48d1-9f5d-b5f011dbbe3e';
+FROM books b 
+JOIN book_loans bl ON b.isbn = bl.isbn 
+WHERE bl.user_id = 'caf349f9-e451-462f-a67a-2a5c80ffaf75';
 ```
 ![Output of query 4](queries/4_output.png)
 
-5. Add a new user to the system.
+5. List all overdue loans.
 
 [Query 5](queries/5_output.sql)
 ```sql
-SELECT *
-FROM Book_Loans
+SELECT * FROM book_loans
 WHERE status = 'overdue';
 ```
 ![Output of query 5](queries/5_output.png)
 
-## Data Integrity and Optimization
 
+## Data Integrity and Optimization
 
 
 ## Reflection

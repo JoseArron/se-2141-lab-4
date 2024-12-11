@@ -1,3 +1,2 @@
-SELECT *
-FROM Book_Loans
+SELECT * FROM book_loans
 WHERE status = 'overdue';
